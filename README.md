@@ -156,10 +156,12 @@ Keep in mind that direct Internet access is required by the container in order t
 
 ## Usage
 
-The query field might not just take the image name (i.e. "alpine:3.12.1") but also the commands and options provided by Trivy.
+The query field of Pointvy might not just take the image name (by example `alpine:3.12.1`) but also the commands and options provided by Trivy when used in commande line.
+
+Here are some interresting options.
 
 |Command/Option|Comment|
-|-|-|
+|---|---|
 |`-s HIGH,CRITICAL`|Just display high and critical vulnerabilities.|
 |`--ignore-unfixed`| Ignore the vulnerabilties that aren't fixed by the distribution. Asking for the update of an image prone to unfixed vulnerabilities might be a problem. |
 |`--format (table\|json\|template)`| Define the output format. |
