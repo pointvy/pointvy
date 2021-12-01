@@ -23,7 +23,7 @@ RUN set -eux; \
     chown -R gunicorn:gunicorn ${APP_HOME}; \
     chown -R gunicorn:gunicorn ${USER_HOME}; \
     curl -L https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz \
-    > trivy.tar.gz; \
+    -o trivy.tar.gz; \
     echo "${TRIVY_CHECKSUM}  trivy.tar.gz" | sha256sum -c -; \
     tar xf trivy.tar.gz && rm trivy.tar.gz && chmod ugo+x trivy; \
     pip install --no-cache-dir -r requirements.txt; \
