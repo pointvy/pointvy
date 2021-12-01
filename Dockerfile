@@ -1,11 +1,11 @@
-FROM python:3.10-alpine
+FROM python:3.10-alpine3.15
 
 ENV PYTHONUNBUFFERED True
 ENV TRIVY_VERSION 0.21.1
 ENV TRIVY_CHECKSUM 4900136f41c713ce8d202e9aa055543a11e56bc280bc864719d4343dc2d3e696
 ENV APP_HOME /app
 ENV USER_HOME /var/cache/gunicorn
-ENV CURL_VERSION 7.79
+ENV CURL_VERSION 7.80
 ENV UID 1001
 ENV GID 1001
 ENV PORT 8080
@@ -26,7 +26,8 @@ RUN set -eux; \
     > trivy.tar.gz; \
     echo "${TRIVY_CHECKSUM}  trivy.tar.gz" | sha256sum -c -; \
     tar xf trivy.tar.gz && rm trivy.tar.gz && chmod ugo+x trivy; \
-    pip install --no-cache-dir -r requirements.txt;
+    pip install --no-cache-dir -r requirements.txt; \
+    apk del curl
 
 COPY app/ ./
 
