@@ -14,6 +14,8 @@ Pointvy is designed to run on a container serverless service based on Knative li
 
 You can also run it in a common Docker / Kubernetes / OpenShift environment (without Knative).
 
+[![Pointvy Screenshot](img/pointvy-screenshot.png)](img/pointvy-screenshot.png)
+
 ## Pointvy is not for you if
 
 * You prefer to simply use Trivy in a console. Using [Trivy](https://aquasecurity.github.io/trivy/) would be a better choice.
@@ -115,15 +117,10 @@ Connect Docker to the registry:
 docker login rg.fr-par.scw.cloud/${NAMESPACE} -u nologin -p ${SCW_SECRET_TOKEN}
 ```
 
-Locally tag the recently built pointvy image with the path to your registry.
+Locally tag the recently built pointvy image with the path to your registry and push the image to your remote Container Registry.
 
 ```bash
 docker tag pointvy:latest rg.fr-par.scw.cloud/${NAMESPACE}/pointvy:latest
-```
-
-Push the image you just tagged to your remote Container Registry.
-
-```bash
 docker push rg.fr-par.scw.cloud/${NAMESPACE}/pointvy:latest
 ```
 
@@ -157,10 +154,21 @@ The interface should be reachable at [http://localhost:8080](http://localhost:80
 
 Keep in mind that direct Internet access is required by the container in order to download the vulnerabilities database.
 
+## Usage
+
+The query field might not just take the image name (i.e. "alpine:3.12.1") but also the commands and options provided by Trivy.
+
+|Command/Option|Comment|
+|-|-|
+|`-s HIGH,CRITICAL`|Just display high and critical vulnerabilities.|
+|`--ignore-unfixed`| Ignore the vulnerabilties that aren't fixed by the distribution. Asking for the update of an image prone to unfixed vulnerabilities might be a problem. |
+|`--format (table\|json\|template)`| Define the output format. |
+|`image -h`| Display help page.|
+
 ## Contributing
 
 Feel free to send PR to add modifications that you would share and see included in this open-source project.
 
 ---
 
-Pointvy is an open-source project that uses Trivy but <b>is not</b> affiliated with, funded by, or associated with Aqua Security.
+Pointvy is an open-source project that uses Trivy but **is not** affiliated with, funded by, or associated with Aqua Security.
