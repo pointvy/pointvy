@@ -33,7 +33,7 @@ The easiest way to run Pointvy in Cloud Run is by using `gcloud` SDK.
 
 [Here is how to install GCP's Cloud SDK that contains `gcloud`](https://cloud.google.com/sdk/docs/install).
 
-Clone Pointvy repository and change inside the newly created folder.
+Clone Pointvy repository and change directory to the newly created folder.
 
 ```bash
 git clone https://github.com/leschard/pointvy.git
@@ -84,7 +84,7 @@ Depending on your configuration, the service might allow direct and unauthentica
 
 ### Deploying on Scaleway Serverless Containers
 
-Clone Pointvy repository and change inside the newly created folder.
+Clone Pointvy repository and change directory to the newly created folder.
 
 ```bash
 git clone https://github.com/leschard/pointvy.git
@@ -134,7 +134,7 @@ The container endpoint will be displayed in the console and be similar to [https
 
 ### Docker
 
-Clone Pointvy repository and change inside the newly created folder.
+Clone Pointvy repository and change directory to the newly created folder.
 
 ```bash
 git clone https://github.com/leschard/pointvy.git
@@ -179,7 +179,7 @@ Here are some interesting options:
 
 ## Examples
 
-Also test is without the `--ignore-unfixed` option to see the difference:
+Also test it without the `--ignore-unfixed` option to see the difference:
 
 ```bash
 --ignore-unfixed mariadb
