@@ -65,7 +65,7 @@ Instructions:
 * "Specify a region": the closest to your location might be a good choice.
 * "Allow unauthenticated invocations to": Set "y" to allow people to request without requiring a GCP Cloud Identity and IAM configured. **This should only be a temporary unsecure choice.**
 
-When the deployment has succeeded, `gcloud` will display the *Service URL* on which is exposed the service. You will get something similar to:
+When the deployment has succeeds, `gcloud` will display the *Service URL* on which is exposed the service. You will get something similar to:
 
 ```bash
 Building using Dockerfile and deploying container to Cloud Run service [pointvy] in project [adjective-name-334110] region [europe-north1]
@@ -79,17 +79,17 @@ Service [pointvy] revision [pointvy-00003-kix] has been deployed and is serving 
 Service URL: https://pointvy-7oaxxxxxxnq-lz.a.run.app
 ```
 
-⚠️ Do not try to use the URL that are present in this example. They won't work.
-
 ⚠️ Keep in mind that the execution of the container in Cloud Run and the storage of its image in your GCP Registry **is not free!**
 Depending on your configuration, the service might allow direct and unauthenticated access to anybody from the Internet. Other people might use it as soon as they know the URL and might increase your bill.
 
 ### Deploying on Scaleway Serverless Containers
 
-Clone Pointvy repository.
+Clone Pointvy repository and change inside the newly created folder.
 
 ```bash
 git clone https://github.com/leschard/pointvy.git
+
+cd pointvy
 ```
 
 As Scaleway doesn't provide a container building pipeline, you have to build the Pointvy container on your side.
@@ -124,29 +124,37 @@ docker tag pointvy:latest rg.fr-par.scw.cloud/${NAMESPACE}/pointvy:latest
 docker push rg.fr-par.scw.cloud/${NAMESPACE}/pointvy:latest
 ```
 
-💡 You can't use Docker Hub as a registry or any other public registry.
+💡 You can't use Docker Hub as a registry or any other public registry, only the Scaleway internal registry can be used.
 
 Finally, deploy the container by using the [web console > Serverless Container](https://console.scaleway.com/containers/namespaces).
 
 The container endpoint will be displayed in the console and be similar to [https://pointvyxxxxxxxx-pointvy.functions.fnc.fr-par.scw.cloud/](https://pointvyxxxxxxxx-pointvy.functions.fnc.fr-par.scw.cloud/).
 
-⚠️ As for GCP Cloud Run, keep in mind that the use of resources is not free. If unauthenticated access to your endpoint is allowed, people may increase your bill.
+⚠️ Like with GCP Cloud Run, keep in mind that the use of resources **is not free**. If unauthenticated access to your endpoint is allowed, people may increase your bill.
 
 ### Docker
 
-Clone Pointvy repository.
+Clone Pointvy repository and change inside the newly created folder.
 
 ```bash
 git clone https://github.com/leschard/pointvy.git
+
+cd pointvy
 ```
+
+Build the image and name id *pointvy*.
 
 ```bash
 docker build . -t pointvy
 ```
 
+Run the image and bind it on port `8080`.
+
 ```bash
-docker run -p 8080:8080 -e PORT=8080 pointvy
+docker run --rm -p 8080:8080 -e PORT=8080 pointvy
 ```
+
+💡 If you want to change the binding port (from which you can reach the service), it is the first `8080` that has to be modified.
 
 ⚠️ **the full `-p 8080:8080 -e PORT=8080` expression *must* be present otherwise the gunicorn server won't be bound to the right TCP port and/or won't be exposed on the good port.**
 
@@ -156,16 +164,38 @@ Keep in mind that direct Internet access is required by the container in order t
 
 ## Usage
 
-The query field of Pointvy might not just take the image name (by example `alpine:3.12.1`) but also the commands and options provided by Trivy when used in commande line.
+The query field of Pointvy might not just take the image name (by example `alpine:3.12.1`) but also the same [commands and options provided by Trivy](https://aquasecurity.github.io/trivy/v0.21.1/vulnerability/examples/filter/) as when used in command line mode.
 
-Here are some interresting options.
+You don't have to write `trivy` at the beginning of the query. Just start with options or the image description.
+
+Here are some interesting options:
 
 |Command/Option|Comment|
 |---|---|
 |`-s HIGH,CRITICAL`|Just display high and critical vulnerabilities.|
-|`--ignore-unfixed`| Ignore the vulnerabilties that aren't fixed by the distribution. Asking for the update of an image prone to unfixed vulnerabilities might be a problem. |
+|`--ignore-unfixed`| Ignore the vulnerabilities that aren't fixed by the distribution. (Asking for the update of an image prone to unfixed vulnerabilities might be a problem.) |
 |`--format (table\|json\|template)`| Define the output format. |
 |`image -h`| Display help page.|
+
+## Examples
+
+Also test is without the `--ignore-unfixed` option to see the difference:
+
+```bash
+--ignore-unfixed mariadb
+```
+
+Using `latest` tag is a often bad idea (`-s` is for *severity*):
+
+```bash
+-s HIGH,CRITICAL python:latest
+```
+
+Only scan for vulnerabilities in the libraries pacakges:
+
+```bash
+--vuln-type library jenkins/jenkins
+```
 
 ## Contributing
 
