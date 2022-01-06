@@ -53,15 +53,14 @@ Set your project ID.
 gcloud config set project [your-project-ID]
 ```
 
-Deploy the project to your Cloud Run tenant on GCP.
+Deploy the project, with *pointvy* as name, to your Cloud Run tenant on GCP.
 
 ```bash
-gcloud run deploy --source .
+gcloud run deploy pointvy --source .
 ```
 
 Instructions:
 
-* "Service name": this will be present in the URL (simply "pointvy" may be enough).
 * "Specify a region": the closest to your location might be a good choice.
 * "Allow unauthenticated invocations to": Set "y" to allow people to request without requiring a GCP Cloud Identity and IAM configured. **This should only be a temporary unsecure choice.**
 
@@ -142,7 +141,7 @@ git clone https://github.com/leschard/pointvy.git
 cd pointvy
 ```
 
-Build the image and name id *pointvy*.
+Build the image and name it *pointvy*. (Don't forget the point in the command.)
 
 ```bash
 docker build . -t pointvy
@@ -164,28 +163,28 @@ Keep in mind that direct Internet access is required by the container in order t
 
 ## Usage
 
-The query field of Pointvy might not just take the image name (by example `alpine:3.12.1`) but also the same [commands and options provided by Trivy](https://aquasecurity.github.io/trivy/v0.21.1/vulnerability/examples/filter/) as when used in command line mode.
+The query field of Pointvy might not just take the image name (by example `alpine:3.12.1`) but also the same [commands and options provided by Trivy](https://aquasecurity.github.io/trivy/latest/vulnerability/examples/filter/) as when used in command line mode.
 
 You don't have to write `trivy` at the beginning of the query. Just start with options or the image description.
 
 Here are some interesting options:
 
 |Command/Option|Comment|
-|---|---|
+|:---|:---|
 |`-s HIGH,CRITICAL`|Just display high and critical vulnerabilities.|
 |`--ignore-unfixed`| Ignore the vulnerabilities that aren't fixed by the distribution. (Asking for the update of an image prone to unfixed vulnerabilities might be a problem.) |
 |`--format (table\|json\|template)`| Define the output format. |
-|`image -h`| Display help page.|
+|`-h`| Display help page.|
 
 ## Examples
 
-Test a scan with the `--ignore-unfixed` option to see the difference:
+Test a scan with and without the `--ignore-unfixed` option to see the difference:
 
 ```bash
 --ignore-unfixed mariadb
 ```
 
-Using `latest` tag is often a bad idea (`-s` is for *severity*):
+`-s` is for filtering by *severity* (also using `latest` tag is often a bad idea, especially with the official Python image)
 
 ```bash
 -s HIGH,CRITICAL python:latest
