@@ -179,19 +179,19 @@ Here are some interesting options:
 
 ## Examples
 
-Also test it without the `--ignore-unfixed` option to see the difference:
+Test a scan with the `--ignore-unfixed` option to see the difference:
 
 ```bash
 --ignore-unfixed mariadb
 ```
 
-Using `latest` tag is a often bad idea (`-s` is for *severity*):
+Using `latest` tag is often a bad idea (`-s` is for *severity*):
 
 ```bash
 -s HIGH,CRITICAL python:latest
 ```
 
-Only scan for vulnerabilities in the libraries pacakges:
+Only scan for vulnerabilities in the library packages:
 
 ```bash
 --vuln-type library jenkins/jenkins
@@ -199,7 +199,7 @@ Only scan for vulnerabilities in the libraries pacakges:
 
 ## Contributing
 
-Feel free to send PR to add modifications that you would share and see included in this open-source project.
+Feel free to send a PR to add modifications that you would share and see included in this open-source project.
 
 ---
 
