@@ -13,7 +13,8 @@ ENV PORT 8080
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 
 WORKDIR ${APP_HOME}
-COPY app/requirements.txt .
+COPY app/Pipfile .
+COPY app/Pipfile.lock .
 
 RUN set -eux; \
     addgroup -g $GID -S gunicorn; \
@@ -26,11 +27,13 @@ RUN set -eux; \
     -o trivy.tar.gz; \
     echo "${TRIVY_CHECKSUM}  trivy.tar.gz" | sha256sum -c -; \
     tar xf trivy.tar.gz && rm trivy.tar.gz && chmod ugo+x trivy; \
-    pip install --no-cache-dir -r requirements.txt; \
+    pip install pipenv==2022.1.8; \
     apk del curl
 
 COPY app/ ./
 
 USER gunicorn
 
-CMD gunicorn --bind :${PORT} --workers 1 --threads 2 --timeout 0 main:app
+RUN pipenv install --deploy
+
+CMD pipenv run gunicorn --bind :${PORT} --workers 1 --threads 2 --timeout 0 main:app
