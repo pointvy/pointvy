@@ -29,14 +29,14 @@ Several deployment options exist.
 
 First, you need an already up and running GCP account (with billing configured). We won't cover it here.
 
-The easiest way to run Pointvy in Cloud Run is by using `gcloud` SDK.
+The easiest way to run Pointvy in Cloud Run is by using `gcloud` CLI tool.
 
 [Here is how to install GCP's Cloud SDK that contains `gcloud`](https://cloud.google.com/sdk/docs/install).
 
 Clone Pointvy repository and change directory to the newly created folder.
 
 ```bash
-git clone https://github.com/leschard/pointvy.git
+git clone https://github.com/pointvy/pointvy.git
 
 cd pointvy
 ```
@@ -86,7 +86,7 @@ Depending on your configuration, the service might allow direct and unauthentica
 Clone Pointvy repository and change directory to the newly created folder.
 
 ```bash
-git clone https://github.com/leschard/pointvy.git
+git clone https://github.com/pointvy/pointvy.git
 
 cd pointvy
 ```
@@ -136,7 +136,7 @@ The container endpoint will be displayed in the console and be similar to [https
 Clone Pointvy repository and change directory to the newly created folder.
 
 ```bash
-git clone https://github.com/leschard/pointvy.git
+git clone https://github.com/pointvy/pointvy.git
 
 cd pointvy
 ```
