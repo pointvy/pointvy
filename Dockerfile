@@ -1,4 +1,4 @@
-FROM python:3.10-alpine3.15
+FROM python:3.10.2-alpine3.15
 
 ENV PYTHONUNBUFFERED True
 ENV TRIVY_VERSION 0.24.0
