@@ -14,9 +14,11 @@ app = Flask(__name__)
 def landing():
     content = ""
     action = url_for("trivy_scan")
-    version = os.environ.get('TRIVY_VERSION')
+    trivy_version = os.environ.get('TRIVY_VERSION')
+    pointvy_version = os.environ.get('POINTVY_VERSION')
     return render_template('main.html', content=content,
-                           action=action, version=version)
+                           action=action, trivy_version=trivy_version,
+                           pointvy_version=pointvy_version)
 
 
 @app.route("/scan/")
