@@ -1,5 +1,6 @@
 
 .DEFAULT: build
+.PHONY: build run-locally deploy audit lock lint dockerfile
 
 build:
 	docker build . -t pointvy
@@ -21,3 +22,8 @@ lock:
 
 lint:
 	flake8 app/main.py
+
+dockerfile:
+	./generate-dockerfile.sh
+	mv Dockerfile Dockerfile.bak
+	mv Dockerfile.latest Dockerfile
