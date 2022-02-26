@@ -9,6 +9,7 @@ ENV CURL_VERSION 7.80
 ENV UID 1001
 ENV GID 1001
 ENV PORT 8080
+ENV PIPENV_VERSION 2022.1.8
 
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 
@@ -27,7 +28,7 @@ RUN set -eux; \
     -o trivy.tar.gz; \
     echo "${TRIVY_CHECKSUM}  trivy.tar.gz" | sha256sum -c -; \
     tar xf trivy.tar.gz && rm trivy.tar.gz && chmod ugo+x trivy; \
-    pip install pipenv==2022.1.8; \
+    pip install pipenv=="${PIPENV_VERSION}"; \
     apk del curl
 
 COPY app/ ./
