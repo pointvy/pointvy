@@ -30,7 +30,7 @@ def trivy_scan():
         # delete every char except a-z A-Z 0-9 : - . , / and space
         bash_escape = re.compile(r'[^a-zA-Z0-9\:\-\.\ \,\/]')
         query_sanitized = bash_escape.sub('', query)
-        cmd = "./trivy image " + format(query_sanitized)
+        cmd = "./trivy image --no-progress " + format(query_sanitized)
         content = os.popen(cmd).read()  # nosec - user input is sanitized
 
         trivy_version = os.environ.get('TRIVY_VERSION')
