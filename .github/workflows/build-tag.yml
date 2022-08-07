@@ -1,9 +1,9 @@
-name: Build and push to latest
+name: Build and push on tags
 
 on:
   push:
-    branches:
-      - 'main'
+    tags:
+      - 'v*'
 
 jobs:
   docker:
@@ -26,4 +26,4 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           push: true
-          tags: pointvy/pointvy:latest
+          tags: pointvy/pointvy:${{github.ref_name}}
