@@ -31,13 +31,12 @@ RUN set -eux; \
     echo "${TRIVY_CHECKSUM}  trivy.tar.gz" | sha256sum -c -; \
     tar xf trivy.tar.gz && rm trivy.tar.gz && chmod ugo+x trivy; \
     apk del curl; \
-    pip install -U pip=="$PIP_VERSION"; \
-    pip install -U pipenv=="$PENV_VERSION"
+    pip install --no-cache-dir -U pip=="$PIP_VERSION" pipenv=="$PENV_VERSION";
 
 COPY app/ ./
 
 USER gunicorn
 
-RUN pipenv install --deploy --ignore-pipfile
+RUN pipenv install --no-cache-dir --deploy --ignore-pipfile
 
 CMD pipenv run gunicorn --bind :${PORT} --workers 1 --threads 2 --timeout 0 main:app
