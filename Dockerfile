@@ -37,6 +37,6 @@ COPY app/ ./
 
 USER gunicorn
 
-RUN pipenv install --no-cache-dir --deploy --ignore-pipfile
+RUN pipenv install --deploy --ignore-pipfile
 
 CMD pipenv run gunicorn --bind :${PORT} --workers 1 --threads 2 --timeout 0 main:app
