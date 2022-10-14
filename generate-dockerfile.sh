@@ -17,7 +17,7 @@ curl -sSL \
     -H "Accept: application/vnd.github.v3+json" \
     https://api.github.com/repos/aquasecurity/trivy/releases/latest > release.json
 
-CS_URL=$(jq -r '.assets[] | select(.name | contains("checksums.txt")) .browser_download_url' release.json)
+CS_URL=$(jq -r '.assets[] | select(.name | endswith("checksums.txt")) .browser_download_url' release.json)
 
 TRIVY_VERSION=$(jq -r '.name' release.json | sed 's/v//1')
 
