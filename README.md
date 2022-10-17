@@ -1,6 +1,4 @@
-[![OpenSSF Scorecard]
-(https://api.securityscorecards.dev/projects/github.com/{org}/{repo}/badge)]
-(https://api.securityscorecards.dev/projects/github.com/{org}/{repo})
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/pointvy/pointvy/badge)](https://api.securityscorecards.dev/projects/github.com/pointvy/pointvy)
 
 # Pointvy
 
