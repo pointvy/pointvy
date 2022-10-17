@@ -1,4 +1,4 @@
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/pointvy/pointvy/badge)](https://api.securityscorecards.dev/projects/github.com/pointvy/pointvy) [![https://github.com/pointvy/pointvy/actions/workflows/semgrep.yml/badge.svg]](https://github.com/pointvy/pointvy/actions/workflows/semgrep.yml)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/pointvy/pointvy/badge)](https://api.securityscorecards.dev/projects/github.com/pointvy/pointvy) [![Semgrep Badge](https://github.com/pointvy/pointvy/actions/workflows/semgrep.yml/badge.svg)](https://github.com/pointvy/pointvy/actions/workflows/semgrep.yml)
 
 # Pointvy
 
