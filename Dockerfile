@@ -1,17 +1,16 @@
-FROM python:3.10.8-alpine3.16
+FROM python:3.11.1-alpine3.17
 
 ENV PYTHONUNBUFFERED True
-ENV TRIVY_VERSION 0.32.1
-ENV TRIVY_CHECKSUM ca0213f0c0f3b76498f1d8c20aabebeb7cedf8433ceacdef853c7841134e0033
+ENV TRIVY_VERSION 0.35.0
+ENV TRIVY_CHECKSUM ebc1dd4d4c0594028d6a501dfc1a73d56add20b29d3dee5ab6e64aac94b1d526
 ENV APP_HOME /app
 ENV USER_HOME /var/cache/gunicorn
-ENV CURL_VERSION 7.83
 ENV UID 1001
 ENV GID 1001
 ENV PORT 8080
-ENV PENV_VERSION 2022.6.7
-ENV PIP_VERSION 22.1.2
-ENV POINTVY_VERSION 1.9.0
+ENV PENV_VERSION 2022.11.30
+ENV PIP_VERSION 22.3.1
+ENV POINTVY_VERSION 1.10.0
 
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 
@@ -19,10 +18,12 @@ WORKDIR ${APP_HOME}
 COPY app/Pipfile .
 COPY app/Pipfile.lock .
 
+# pinning the curl version is non-relevant as Alpine already fixes it
+# hadolint ignore=DL3018
 RUN set -eux; \
     addgroup -g $GID -S gunicorn; \
     adduser -S -D -H -u $UID -h ${USER_HOME} -G gunicorn -g gunicorn gunicorn; \
-    apk add --no-cache curl~=${CURL_VERSION} && rm -rf /var/cache/apk/*; \
+    apk add --no-cache curl && rm -rf /var/cache/apk/*; \
     mkdir -p ${USER_HOME}; \
     chown -R gunicorn:gunicorn ${APP_HOME}; \
     chown -R gunicorn:gunicorn ${USER_HOME}; \
