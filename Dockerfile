@@ -40,4 +40,4 @@ USER gunicorn
 
 RUN pipenv install --deploy --ignore-pipfile
 
-CMD pipenv run gunicorn --bind :${PORT} --workers 1 --threads 2 --timeout 0 main:app
+CMD pipenv run gunicorn --bind :${PORT} --workers 1 --threads 2 --timeout 0 pointvy:app
