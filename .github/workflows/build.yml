@@ -30,3 +30,4 @@ jobs:
         with:
           push: true
           tags: pointvy/pointvy:latest
+          provenance: false             # temporary workaround, Cloud Run doesn't support multi-arch images
