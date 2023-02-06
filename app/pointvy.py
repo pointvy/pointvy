@@ -24,7 +24,7 @@ def landing():
 def trivy_scan():
     query = request.args.get("q")
 
-    if query != "":
+    if query:
 
         # delete every char except a-z A-Z 0-9 : - . , / and space
         bash_escape = re.compile(r'[^a-zA-Z0-9\:\-\.\ \,\/]')
