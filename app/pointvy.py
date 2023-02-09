@@ -12,6 +12,7 @@ app = Flask(__name__)
 TRIVY_VERSION = os.environ.get("TRIVY_VERSION")
 POINTVY_VERSION = os.environ.get("POINTVY_VERSION")
 
+
 @app.route("/")
 def landing():
     action = url_for("trivy_scan")
@@ -48,4 +49,4 @@ def trivy_scan():
 
 if __name__ == "__main__":
 
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))  # nosec // nosemgrep
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080))) # nosec // nosemgrep
