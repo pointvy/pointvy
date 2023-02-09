@@ -26,7 +26,8 @@ jobs:
 #          password: ${{ secrets.DOCKERHUB_TOKEN }}
 #      -
         name: Build and push
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           push: false
           tags: pointvy/pointvy:latest
+          provenance: false             # temporary workaround, Cloud Run doesn't support multi-arch images
