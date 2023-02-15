@@ -4,12 +4,18 @@ updates:
   - package-ecosystem: "pip"
     directory: "/app"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      time: "17:00"
+      day: "friday"
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      time: "17:00"
+      day: "friday"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      time: "17:00"
+      day: "friday"
