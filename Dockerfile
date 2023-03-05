@@ -1,9 +1,8 @@
-FROM aquasec/trivy:0.37.1 as base
+FROM aquasec/trivy:0.38.1 as base
 
 FROM python:3.11.2-alpine3.17
 
 ENV PYTHONUNBUFFERED True
-ENV TRIVY_VERSION 0.37.1
 ENV APP_HOME /app
 ENV USER_HOME /var/cache/gunicorn
 ENV UID 1001
