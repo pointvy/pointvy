@@ -13,11 +13,18 @@ TRIVY_VERSION = os.environ.get("TRIVY_VERSION")
 POINTVY_VERSION = os.environ.get("POINTVY_VERSION")
 
 
+def get_trivy_version():
+    cmd = "./trivy --version"
+    line = os.popen(cmd).read()
+    version = re.findall(r"\d+\.\d+\.\d", line)
+    return version[0]
+
+
 @app.route("/")
 def landing():
     action = url_for("trivy_scan")
     return render_template('main.html', content="",
-                           action=action, trivy_version=TRIVY_VERSION,
+                           action=action, trivy_version=get_trivy_version(),
                            pointvy_version=POINTVY_VERSION)
 
 
@@ -43,10 +50,11 @@ def trivy_scan():
     action = url_for("trivy_scan")
     return render_template("main.html", content=result,
                            action=action, query=query_sanitized,
-                           trivy_version=TRIVY_VERSION,
+                           trivy_version=get_trivy_version(),
                            pointvy_version=POINTVY_VERSION)
 
 
 if __name__ == "__main__":
 
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080))) # nosec // nosemgrep
+    # nosec // nosemgrep
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
