@@ -37,7 +37,7 @@ def trivy_scan():
         # delete every char except a-z A-Z 0-9 : - . , / and space
         bash_escape = re.compile(r'[^a-zA-Z0-9\:\-\.\ \,\/]')
         query_sanitized = bash_escape.sub('', query)
-        cmd = "./trivy image --no-progress "
+        cmd = "./trivy image --scanners vuln --no-progress "
 
         checked_value = ""
         if request.args.get("ignore-unfixed") == "true":
