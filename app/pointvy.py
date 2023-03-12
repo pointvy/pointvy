@@ -25,7 +25,7 @@ def landing():
     action = url_for("trivy_scan")
     return render_template('main.html', content="",
                            action=action, trivy_version=get_trivy_version(),
-                           pointvy_version=POINTVY_VERSION)
+                           pointvy_version=POINTVY_VERSION, checked="checked")
 
 
 @app.route("/scan/")
@@ -37,7 +37,14 @@ def trivy_scan():
         # delete every char except a-z A-Z 0-9 : - . , / and space
         bash_escape = re.compile(r'[^a-zA-Z0-9\:\-\.\ \,\/]')
         query_sanitized = bash_escape.sub('', query)
-        cmd = "./trivy image --no-progress " + format(query_sanitized)
+        cmd = "./trivy image --no-progress "
+
+        checked_value = ""
+        if request.args.get("ignore-unfixed") == "true":
+            cmd += "--ignore-unfixed "
+            checked_value = "checked"
+
+        cmd += format(query_sanitized)
         content = os.popen(cmd).read()  # nosec - user input is sanitized
 
         # remove colors special characters
@@ -51,7 +58,8 @@ def trivy_scan():
     return render_template("main.html", content=result,
                            action=action, query=query_sanitized,
                            trivy_version=get_trivy_version(),
-                           pointvy_version=POINTVY_VERSION)
+                           pointvy_version=POINTVY_VERSION,
+                           checked=checked_value)
 
 
 if __name__ == "__main__":
