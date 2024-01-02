@@ -1,6 +1,6 @@
 FROM aquasec/trivy:0.48.1 as base
 
-FROM python:3.12.0-alpine3.18
+FROM python:3.12.1-alpine3.18
 
 ENV PYTHONUNBUFFERED True
 ENV APP_HOME /app
