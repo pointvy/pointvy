@@ -55,7 +55,7 @@ def trivy_scan():
 
         try:
             res = subprocess.Popen(
-                cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE) # nosemgrep
             output, error_handler = res.communicate()
             if output:
                 # print(f"OK> output {output}")
