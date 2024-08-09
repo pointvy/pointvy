@@ -26,7 +26,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       -
         name: Build and push
-        uses: docker/build-push-action@1ca370b3a9802c92e886402e0dd88098a2533b12 # tag=v1.1.1
+        uses: docker/build-push-action@16ebe778df0e7752d2cfcbd924afdbbd89c1a755 # tag=v1.1.1
         with:
           push: true
           tags: pointvy/pointvy:latest
