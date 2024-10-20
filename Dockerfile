@@ -1,4 +1,4 @@
-FROM aquasec/trivy:0.56.1 AS base
+FROM aquasec/trivy:0.56.2 AS base
 
 FROM python:3.12.7-alpine3.19
 
