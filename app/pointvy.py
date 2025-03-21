@@ -7,17 +7,37 @@ from flask import request
 from flask import render_template
 from flask import url_for
 from flask import redirect
+import logging
 
 app = Flask(__name__)
+
+handler = logging.StreamHandler()
+handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+app.logger.addHandler(handler)
+app.logger.setLevel(logging.INFO)
 
 TRIVY_VERSION = os.environ.get("TRIVY_VERSION")
 POINTVY_VERSION = os.environ.get("POINTVY_VERSION")
 
 
 def get_trivy_version():
-    cmd = "./trivy --version"
-    line = os.popen(cmd).read()
+    try:
+        result = subprocess.run(
+            ["./trivy", "--version"],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        line = result.stdout
+    except subprocess.CalledProcessError as e:
+        app.logger.error(f"Trivy version check failed: {e.stderr}")
+        return "unknown"
+    except Exception as e:
+        app.logger.error(f"Error getting Trivy version: {str(e)}")
+        return "unknown"
     version = re.findall(r"\d+\.\d+\.\d", line)
+    app.logger.info(f"Trivy version: {version[0]}")
     return version[0]
 
 
@@ -32,6 +52,7 @@ def landing():
 @app.route("/scan/")
 def trivy_scan():
     query = request.args.get("q")
+    app.logger.info(f"Starting trivy scan with query: {query}")
 
     if query:
 
@@ -54,21 +75,20 @@ def trivy_scan():
         ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
         try:
+            app.logger.info(f"Executing command: {cmd}")
             res = subprocess.Popen(
                 cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE) # nosemgrep
             output, error_handler = res.communicate()
             if output:
-                # print(f"OK> output {output}")
+                app.logger.info(f"Query successful.")
                 content = output.decode('utf-8')
             else:
                 if error_handler:
-                    # print(f"Error> error {error_handler.strip()}")
+                    app.logger.error(f"Error> error {error_handler.strip()}")
                     error = error_handler.strip().decode('utf-8')
                     error = ansi_escape.sub('', error)
         except OSError as e:
-            print(f"OSError > {e.errno}")
-            print(f"OSError > {e.strerror}")
-            print(f"OSError > {e.filename}")
+            app.logger.error(f"OSError > {e.errno} | {e.strerror} | {e.filename}")
 
             error = e.strerror.decode('utf-8')
 
@@ -80,6 +100,7 @@ def trivy_scan():
         return redirect(url_for("landing"))
 
     action = url_for("trivy_scan")
+
     return render_template("main.html", content=result,
                            action=action, query=query_sanitized,
                            trivy_version=get_trivy_version(),
