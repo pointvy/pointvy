@@ -1,108 +1,156 @@
-# Pointvy - Claude Code Project Instructions
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
-Pointvy is a secure web interface for Trivy vulnerability scanner execution. It's designed as a Flask application that runs in containerized serverless environments like GCP Cloud Run or Scaleway Serverless Containers.
+Pointvy is a Flask web interface for Trivy vulnerability scanner, designed for containerized serverless environments (GCP Cloud Run, Scaleway Serverless Containers). The entire application is ~115 lines of Python.
 
-## Architecture
-- **Backend**: Python Flask application (`app/pointvy.py`)
-- **Scanner**: Aqua Security Trivy (bundled in container)
-- **Frontend**: Simple HTML template (`app/templates/main.html`)
-- **Deployment**: Docker container with Alpine Linux base
+**Tech Stack:** Python 3.13.1, Flask 2.3.3, Gunicorn 23.0.0, Alpine Linux 3.19, Trivy 0.67.0
 
-## Security Features Already Implemented
-- Input sanitization with regex filtering for bash safety
-- Query length limits (MAX_QUERY_LENGTH = 1000)
-- ANSI escape sequence removal
-- Subprocess timeout protection (30 seconds)
-- Non-root container execution (UID/GID 1001)
-- Comprehensive error handling and logging
-- BadRequest exception handling for invalid inputs
+## Essential Commands
 
-## Key Files and Structure
-```
-pointvy/
-├── app/
-│   ├── pointvy.py              # Main Flask application
-│   ├── templates/main.html     # Web interface template
-│   ├── Pipfile & Pipfile.lock  # Python dependencies
-│   └── pyproject.toml          # Python project config
-├── Dockerfile                  # Container build configuration
-├── .github/workflows/          # CI/CD pipelines
-├── SecurityManifesto.md        # Security development guidelines
-└── contrib/                    # Output format templates
+### Development Workflow
+```bash
+# Build container locally
+make build
+
+# Run locally on port 8080
+make run-locally
+
+# Deploy to GCP Cloud Run
+make deploy
+
+# Security audit (pipenv check + bandit)
+make audit
+
+# Python linting
+make lint
+
+# Update Pipfile.lock
+make lock
 ```
 
-## Development Guidelines
+**Critical:** When running with `docker run`, you MUST use: `-p 8080:8080 -e PORT=8080` (both port mapping AND environment variable required for Gunicorn binding)
 
-### Security-First Approach
-- Follow the SecurityManifesto.md principles for all code changes
-- Validate all external inputs before processing
-- Use parameterized queries and safe subprocess execution
-- Never expose system internals in error messages
-- Maintain comprehensive security logging
+### Testing Changes
+No automated test suite exists. Manual testing workflow:
+1. Build: `make build`
+2. Run: `make run-locally`
+3. Test at http://localhost:8080 with queries like: `alpine:3.12.1` or `--ignore-unfixed mariadb`
 
-### Code Standards
-- Use Flask best practices with proper error handling
-- Implement timeout protection for external processes
-- Sanitize user inputs with allowlist validation
-- Follow Python security guidelines (PEP 8, secure coding)
+## Application Architecture
 
-### Testing
-- Test input validation thoroughly
-- Verify subprocess execution safety
-- Check timeout handling
-- Validate error message safety (no information disclosure)
+### Core Flow
+```
+User Input (web form)
+  → Input Sanitization (regex allowlist: [^a-zA-Z0-9\:\-\.\ \,\/])
+  → Subprocess Execution: ./trivy image --scanners vuln --no-progress [OPTIONS] [IMAGE]
+  → ANSI Escape Removal (regex: \x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~]))
+  → HTML Output Display
+```
 
-### Dependencies
-- Keep Trivy scanner updated (currently 0.65.0)
-- Maintain Python and Alpine base image updates
-- Use Pipenv for dependency management
-- Pin all dependency versions for reproducible builds
+### Flask Routes (`app/pointvy.py`)
+- `GET /` - Landing page with form, displays Trivy version
+- `GET /scan/` - Executes Trivy scan with sanitized input, handles errors
 
-## Common Tasks
+### Security Controls (Already Implemented)
+- **Input Sanitization:** Allowlist regex before subprocess execution
+- **ANSI Removal:** Strips color codes to prevent HTML injection
+- **Process Isolation:** `subprocess.Popen()` (NOT shell=True)
+- **Timeout Protection:** 30 second limit on subprocess execution
+- **Non-root Execution:** Container runs as gunicorn:1001 (UID/GID 1001)
+- **Error Sanitization:** No system internals exposed in error messages
 
-### Adding New Features
-1. Implement input validation first
-2. Add comprehensive error handling
-3. Include security logging
-4. Test timeout scenarios
-5. Update SecurityManifesto.md if needed
+### Subprocess Execution Details
+```python
+# Command structure:
+./trivy image --scanners vuln --no-progress [--ignore-unfixed] [USER_QUERY]
 
-### Security Updates
-1. Check for Trivy scanner updates
-2. Update base container images
-3. Review and update input sanitization
-4. Audit subprocess execution patterns
+# Example actual command:
+./trivy image --scanners vuln --no-progress --ignore-unfixed alpine:3.12.1
+```
 
-### Container Updates
-1. Update FROM statements in Dockerfile
-2. Test security scanner functionality
-3. Verify non-root execution works
-4. Check file permissions and ownership
+## CI/CD Pipeline
+
+### Automated Workflows (.github/workflows/)
+**Build Pipeline:**
+- `build.yml` - Push to main → DockerHub `pointvy/pointvy:latest`
+- `build-pr.yml` - PR validation (build only, no push)
+- `build-tag.yml` - Git tags `v*` → DockerHub versioned tags
+
+**Security Pipeline:**
+- `security-review.yml` - Claude Code Security Review on PRs
+- `claude-code-review.yml` - Claude Code Review (quality, bugs, security)
+- `semgrep.yml` - SAST scanning (daily 17:20 UTC + PRs)
+- `scorecards-analysis.yml` - OSSF Scorecard (weekly + main pushes)
+
+**Dependency Management:**
+- Dependabot: Weekly updates (Fridays 17:00 UTC) for pip, docker, github-actions
+
+### Pre-commit Hooks
+- YAML validation, private key detection, large file detection
+- Trailing whitespace, end-of-file fixes, symlink validation
+- Configured in `.pre-commit-config.yaml`
+
+## Key Files
+
+### Application Code
+- `app/pointvy.py` - Main Flask app (115 lines), contains all business logic
+- `app/templates/main.html` - Bootstrap 5 web interface
+- `app/Pipfile` - Minimal dependencies (Flask ~=2.3.3, gunicorn ~=23.0.0)
+
+### Container Configuration
+- `Dockerfile` - Multi-stage build: Trivy base → Alpine Python runtime
+- Non-root user setup (gunicorn:1001)
+- Entrypoint: `pipenv run gunicorn --bind :${PORT} --workers 1 --threads 2 --timeout 0 pointvy:app`
+
+### Security Documentation
+- `SecurityManifesto.md` - Comprehensive security principles (MUST READ before changes)
+- `SECURITY.md` - Vulnerability reporting policy
+- `.pre-commit-config.yaml` - Local security checks
+
+## Making Changes
+
+### When Modifying Input Handling
+1. Check SecurityManifesto.md requirements
+2. Update input sanitization regex if needed (currently: `[^a-zA-Z0-9\:\-\.\ \,\/]`)
+3. Test command injection scenarios manually
+4. Verify ANSI escape removal still works
+5. Check subprocess timeout handling
+
+### When Updating Dependencies
+```bash
+# Update Pipfile, then:
+cd app && pipenv lock
+
+# Security audit:
+make audit
+```
+
+### When Updating Trivy Version
+1. Update `FROM aquasec/trivy:X.Y.Z` in Dockerfile
+2. Test scanning functionality manually
+3. Verify version detection works: check `get_trivy_version()` function
+
+### When Updating Base Images
+1. Update `FROM python:X.Y.Z-alpineX.YZ` in Dockerfile
+2. Test container build: `make build`
+3. Verify non-root execution: `docker run` should show gunicorn:1001 process owner
+4. Test scanning: `make run-locally` → http://localhost:8080
 
 ## Environment Variables
-- `PORT`: Application binding port (default: 8080)
-- `TRIVY_VERSION`: Trivy scanner version
-- `POINTVY_VERSION`: Application version (currently 1.15.0)
+- `PORT` - Gunicorn binding port (required, default: 8080)
+- `TRIVY_VERSION` - Set during build from Dockerfile
+- `POINTVY_VERSION` - Application version (currently 1.15.0)
 
-## Security Considerations
-- Application runs as non-root user (gunicorn:1001)
-- Input sanitization prevents command injection
-- Subprocess timeouts prevent resource exhaustion
-- Error handling prevents information disclosure
-- Comprehensive logging for security monitoring
+## Deployment Targets
+- **GCP Cloud Run:** `make deploy` (requires gcloud auth)
+- **Scaleway Serverless:** Manual build + registry push (see README.md)
+- **Docker/Kubernetes:** `make build` + standard deployment
 
-## Deployment Security
-- Use secure container registries
-- Enable authentication for production deployments
-- Monitor resource usage and costs
-- Implement proper network security (VPC, firewall rules)
-- Set up monitoring and alerting for security events
-
-## When Working on This Project
-1. Always prioritize security over convenience
-2. Test all input validation thoroughly
-3. Never expose internal system details
-4. Follow the principle of least privilege
-5. Document security decisions in code comments
-6. Update security documentation when adding features
+## Important Constraints
+- **No test suite** - Manual testing required
+- **Single Python file** - All logic in `app/pointvy.py`
+- **Minimal dependencies** - Only Flask + Gunicorn
+- **Internet required** - Container needs direct access for CVE database downloads
+- **Security-first** - Read SecurityManifesto.md before ANY code changes
