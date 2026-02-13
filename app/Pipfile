@@ -4,7 +4,7 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-gunicorn = "~=23.0.0"
+gunicorn = "~=25.1.0"
 Flask = "~=2.3.3"
 
 [dev-packages]
