@@ -1,6 +1,6 @@
 FROM aquasec/trivy:0.69.3 AS base
 
-FROM python:3.13.1-alpine3.19
+FROM dhi.io/python:3.14.3-alpine3.23
 
 ENV PYTHONUNBUFFERED="True"
 ENV APP_HOME="/app"
