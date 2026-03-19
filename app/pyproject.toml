@@ -1,0 +1,8 @@
+[project]
+name = "pointvy"
+version = "1.15.0"
+requires-python = ">=3.13"
+dependencies = [
+    "gunicorn~=23.0.0",
+    "Flask~=2.3.3",
+]

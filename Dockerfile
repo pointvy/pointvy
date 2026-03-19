@@ -8,17 +8,19 @@ ENV USER_HOME="/var/cache/gunicorn"
 ENV UID="1001"
 ENV GID="1001"
 ENV PORT="8080"
-ENV PENV_VERSION="2024.1.0"
-ENV PIP_VERSION="24.2   "
+ENV UV_VERSION="0.10.10"
+ENV UV_COMPILE_BYTECODE=1
+ENV UV_LINK_MODE=copy
 ENV POINTVY_VERSION="1.15.0"
 
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 
 WORKDIR ${APP_HOME}
-COPY app/Pipfile .
-COPY app/Pipfile.lock .
+COPY app/pyproject.toml .
+COPY app/uv.lock .
 
 COPY --from=base /usr/local/bin/trivy ${APP_HOME}/
+COPY --from=ghcr.io/astral-sh/uv:0.10.10 /uv /usr/local/bin/uv
 
 # pinning the curl version is non-relevant as Alpine already fixes it
 # hadolint ignore=DL3018
@@ -28,13 +30,13 @@ RUN set -eux; \
     mkdir -p ${USER_HOME}; \
     chown -R gunicorn:gunicorn ${APP_HOME}; \
     chown -R gunicorn:gunicorn ${USER_HOME}; \
-    pip install --no-cache-dir -U pip=="$PIP_VERSION" pipenv=="$PENV_VERSION";
+    chmod +x /usr/local/bin/uv;
 
 COPY app/pointvy.py ${APP_HOME}
 COPY app/templates/* ${APP_HOME}/templates/
 
 USER gunicorn
 
-RUN pipenv install --deploy --ignore-pipfile
+RUN uv sync --frozen --no-dev
 
-CMD pipenv run gunicorn --bind :${PORT} --workers 1 --threads 2 --timeout 0 pointvy:app
+CMD uv run gunicorn --bind :${PORT} --workers 1 --threads 2 --timeout 0 pointvy:app
