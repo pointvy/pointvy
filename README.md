@@ -21,7 +21,14 @@ You can also run it in a common Docker / Kubernetes / OpenShift environment (wit
 ## Pointvy is not for you if
 
 * You prefer to simply use Trivy in a console. Using [Trivy](https://aquasecurity.github.io/trivy/) would be a better choice.
-* You want to automate Trivy scans in a Kubernetes cluster, then try [Starboard](https://aquasecurity.github.io/starboard/), another Aqua Security open-source project, and maybe bind it to an [Octant](https://octant.dev/) dashboard.
+* You want to automate Trivy scans in a Kubernetes cluster. A CLI or CI/CD integration of Trivy would be more appropriate.
+
+## Prerequisites
+
+* [Docker](https://docs.docker.com/get-docker/) — required for all deployment options
+* [gcloud CLI](https://cloud.google.com/sdk/docs/install) — required for GCP Cloud Run deployment
+* A GCP account with billing enabled — required for GCP Cloud Run deployment
+* A Scaleway account — required for Scaleway Serverless Containers deployment
 
 ## Deployment of Pointvy 🚀
 
@@ -135,7 +142,13 @@ The container endpoint will be displayed in the console and be similar to [https
 
 ### Docker
 
-Clone Pointvy repository and change directory to the newly created folder.
+The easiest way is to pull the pre-built image directly from Docker Hub:
+
+```bash
+docker pull pointvy/pointvy:latest
+```
+
+Alternatively, you can build the image from source. Clone the repository and change directory to the newly created folder.
 
 ```bash
 git clone https://github.com/pointvy/pointvy.git
@@ -202,6 +215,10 @@ Only scan for vulnerabilities in the library packages:
 
 Feel free to send a PR to add modifications that you would share and see included in this open-source project.
 
----
+## License
+
+Pointvy is licensed under the [Apache License 2.0](LICENSE).
+
+## Disclaimer
 
 Pointvy is an open-source project that uses Trivy but **is not** affiliated with, funded by, or associated with Aqua Security.
