@@ -12,13 +12,12 @@ deploy:
 	gcloud run deploy pointvy --source .
 
 audit:
-	cd app; pipenv run pipenv check .
+	cd app && uv pip check
 	bandit app/main.py
 
-# generate new Pipfile.lock
+# generate new uv.lock
 lock:
-	cd app
-	pipenv lock
+	cd app && uv lock
 
 lint:
 	flake8 app/main.py
