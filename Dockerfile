@@ -1,6 +1,6 @@
 FROM aquasec/trivy:0.69.3 AS base
 
-FROM python:3.13.1-alpine3.19
+FROM python:3.14.3-alpine3.23@sha256:faee120f7885a06fcc9677922331391fa690d911c020abb9e8025ff3d908e510
 
 ENV PYTHONUNBUFFERED="True"
 ENV APP_HOME="/app"
@@ -13,7 +13,7 @@ ENV UV_COMPILE_BYTECODE=1
 ENV UV_LINK_MODE=copy
 ENV POINTVY_VERSION="1.16.0"
 
-SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
+SHELL ["/bin/sh", "-eo", "pipefail", "-c"]
 
 WORKDIR ${APP_HOME}
 COPY app/pyproject.toml .
