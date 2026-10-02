@@ -7,12 +7,20 @@ updates:
       interval: "weekly"
       time: "17:00"
       day: "friday"
+    # Wait before proposing freshly published versions (supply-chain
+    # safety margin). Security updates are not delayed by cooldown.
+    cooldown:
+      default-days: 7
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
       interval: "weekly"
       time: "17:00"
       day: "friday"
+    # Wait before proposing freshly published versions (supply-chain
+    # safety margin). Security updates are not delayed by cooldown.
+    cooldown:
+      default-days: 7
     ignore:
       # Python minor upgrades (e.g. 3.14 -> 3.15, incl. pre-releases)
       # are done manually; patch updates still flow through.
@@ -24,3 +32,7 @@ updates:
       interval: "weekly"
       time: "17:00"
       day: "friday"
+    # Wait before proposing freshly published versions (supply-chain
+    # safety margin). Security updates are not delayed by cooldown.
+    cooldown:
+      default-days: 7

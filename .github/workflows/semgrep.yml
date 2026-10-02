@@ -35,4 +35,5 @@ jobs:
         with:
           persist-credentials: false
       # Run the "semgrep scan" command on the command line of the docker image.
-      - run: semgrep scan --config auto
+      # --error: exit non-zero on findings so the check actually blocks.
+      - run: semgrep scan --config auto --error
