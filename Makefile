@@ -1,12 +1,16 @@
 
 .DEFAULT: build
-.PHONY: build run-locally deploy audit lock lint dockerfile
+.PHONY: build run-locally deploy audit lock lint dockerfile smoke
 
 build:
 	docker build . -t pointvy
 
 run-locally:
 	docker run -e PORT=8080 -p 8080:8080 pointvy
+
+# build the image and run the container smoke/security tests
+smoke:
+	./tests/smoke.sh
 
 deploy:
 	gcloud run deploy pointvy --source .

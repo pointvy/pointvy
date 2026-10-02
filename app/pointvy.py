@@ -52,7 +52,8 @@ def landing():
 @app.route("/scan/")
 def trivy_scan():
     query = request.args.get("q")
-    app.logger.info(f"Starting trivy scan with query: {query}")
+    # !r escapes CR/LF so the raw query cannot forge log lines
+    app.logger.info(f"Starting trivy scan with query: {query!r}")
 
     if query:
 
@@ -67,6 +68,9 @@ def trivy_scan():
             cmd.append("--ignore-unfixed")
             checked_value = "checked"
 
+        # "--" ends option parsing: a query starting with "-" (still allowed
+        # by the filter above) is an image reference, never a Trivy flag
+        cmd.append("--")
         cmd.append(format(query_sanitized))
 
         error = ""
@@ -90,7 +94,8 @@ def trivy_scan():
         except OSError as e:
             app.logger.error(f"OSError > {e.errno} | {e.strerror} | {e.filename}")
 
-            error = e.strerror.decode('utf-8')
+            # generic message: do not expose system details to the client
+            error = "The scanner could not be started."
 
         # remove colors special characters
         ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
