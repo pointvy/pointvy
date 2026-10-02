@@ -49,7 +49,7 @@ them into docs:
   workflows/
     build.yml                 # push to main -> pointvy/pointvy:latest
     build-pr.yml              # PR -> build only, no push
-    build-tag.yml             # tag v* -> pointvy/pointvy:<version>
+    build-tag.yml             # tag v* -> pointvy/pointvy:<tag> (e.g. v1.17.1)
     semgrep.yml               # SAST on PR, push to main, daily; blocking (--error)
     scorecards-analysis.yml   # OpenSSF Scorecard, weekly + push to main
 app/
@@ -155,7 +155,8 @@ semgrep scan --config auto --error  # same as CI
    `app/pyproject.toml`, then `cd app && uv lock`.
 2. Merge to `main` (publishes `latest`).
 3. Tag `vX.Y.Z` on the merge commit and push the tag (publishes
-   `pointvy/pointvy:X.Y.Z` via `build-tag.yml`).
+   `pointvy/pointvy:vX.Y.Z` via `build-tag.yml`; the image tag keeps
+   the `v` prefix).
 4. Create a GitHub release "Pointvy X.Y.Z" with notes grouped by
    Security / Python dependencies / Trivy scanner / Base image / GitHub
    Actions / Documentation.
