@@ -10,6 +10,9 @@ SKIP_BUILD=1 IMAGE=pointvy tests/smoke.sh   # reuse an existing image
 KEEP=1 tests/smoke.sh               # leave the container running afterwards
 ```
 
+CI runs it on every PR that touches `app/`, `Dockerfile`, `.dockerignore` or
+`tests/` (`.github/workflows/smoke.yml`), and on demand via *Run workflow*.
+
 Requires Docker, curl and network access (Trivy downloads its database and
 pulls the scanned images). A full run takes a few minutes.
 

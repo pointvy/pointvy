@@ -51,6 +51,7 @@ them into docs:
     build-pr.yml              # PR -> build only, no push
     build-tag.yml             # tag v* -> pointvy/pointvy:<tag> (e.g. v1.17.1)
     semgrep.yml               # SAST on PR, push to main, daily; blocking (--error)
+    smoke.yml                 # tests/smoke.sh on PRs touching app/, Dockerfile, tests/
     scorecards-analysis.yml   # OpenSSF Scorecard, weekly + push to main
 app/
   pointvy.py                  # Flask app
@@ -109,8 +110,8 @@ Dockerfile, Makefile, README.md, SECURITY.md, SecurityManifesto.md
    `Dockerfile` are pinned by tag only.
 5. **Makefile**: `audit` and `lint` reference `app/main.py` (should be
    `app/pointvy.py`); `dockerfile` calls a non-existent `generate-dockerfile.sh`.
-6. **No unit tests**: only the container-level `tests/smoke.sh`, which is
-   not yet run in CI.
+6. **No unit tests**: only the container-level `tests/smoke.sh` (run in CI
+   by `smoke.yml`).
 
 ## Testing
 
@@ -173,7 +174,8 @@ semgrep scan --config auto --error  # same as CI
   `fix/...`, `ci/...`, `chore/...`). Avoid a `test/` prefix: a stale
   `origin/test` ref conflicts with it.
 - Squash-merge PRs; conventional-commit titles (`fix:`, `chore(deps):`, `ci:`).
-- CI on PRs: Docker build, Semgrep (blocking), GitGuardian.
+- CI on PRs: Docker build, Semgrep (blocking), GitGuardian, and smoke tests
+  (`smoke.yml`, only when `app/`, `Dockerfile`, `.dockerignore` or `tests/` change).
 
 ## Security Checklist for Changes
 - [ ] User input validated (allowlist) and passed as a single argv element after `--`
