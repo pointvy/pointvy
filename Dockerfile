@@ -37,6 +37,7 @@ COPY app/templates/* ${APP_HOME}/templates/
 
 USER gunicorn
 
-RUN uv sync --frozen --no-dev
+# --locked fails the build if uv.lock is out of sync with pyproject.toml
+RUN uv sync --locked --no-dev
 
 CMD uv run gunicorn --bind :${PORT} --workers 1 --threads 2 --timeout 0 pointvy:app
