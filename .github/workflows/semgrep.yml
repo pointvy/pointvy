@@ -14,22 +14,25 @@ on:
     - cron: '20 17 * * *' # Sets Semgrep to scan every day at 17:20 UTC.
     # It is recommended to change the schedule to a random time.
 
+# The scan only reads the source; never hand a write token to the container.
+permissions:
+  contents: read
+
 jobs:
   semgrep:
     # User definable name of this GitHub Actions job.
     name: semgrep-oss/scan
-    # If you are self-hosting, change the following `runs-on` value: 
+    # If you are self-hosting, change the following `runs-on` value:
     runs-on: ubuntu-latest
 
     container:
-      # A Docker image with Semgrep installed. Do not change this.
-      image: semgrep/semgrep
-
-    # Skip any PR created by dependabot to avoid permission issues:
-    if: (github.actor != 'dependabot[bot]')
+      # A Docker image with Semgrep installed, pinned by digest.
+      image: semgrep/semgrep:1.178.0@sha256:32e459968daabe7ab86968184a29109b9564aa00392401156f9788452b42786b
 
     steps:
-      # Fetch project source with GitHub Actions Checkout. Use either v3 or v4.
-      - uses: actions/checkout@v6
+      # Fetch project source with GitHub Actions Checkout.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # tag=v7.0.1
+        with:
+          persist-credentials: false
       # Run the "semgrep scan" command on the command line of the docker image.
       - run: semgrep scan --config auto
