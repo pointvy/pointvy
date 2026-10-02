@@ -1,0 +1,33 @@
+name: Smoke tests
+
+# Builds the image and runs tests/smoke.sh (runtime, functional, security
+# and robustness checks against the HTTP API).
+on:
+  pull_request:
+    branches:
+      - 'main'
+    paths:
+      - 'app/**'
+      - 'Dockerfile'
+      - '.dockerignore'
+      - 'tests/**'
+      - '.github/workflows/smoke.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # tag=v7.0.1
+        with:
+          persist-credentials: false
+      - name: Run container smoke tests
+        run: ./tests/smoke.sh
