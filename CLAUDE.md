@@ -29,7 +29,9 @@ them into docs:
 - `GET /` renders the form, the Trivy version and the Pointvy version.
 - `GET /scan/?q=<image>[&ignore-unfixed=true]` runs
   `./trivy image --scanners vuln --no-progress [--ignore-unfixed] -- <query>`
-  and renders stdout (or stderr as an error). No `q` redirects to `/`.
+  (own process group, killed after `SCAN_TIMEOUT`) and renders stdout (or
+  stderr, or a generic message, as an error). No `q` redirects to `/`; a
+  query that is empty after filtering is rejected without running Trivy.
 
 ### Container (`Dockerfile`)
 - Multi-stage: Trivy binary from `aquasec/trivy`, app on Alpine Python.
@@ -101,9 +103,10 @@ Dockerfile, Makefile, README.md, SECURITY.md, SecurityManifesto.md
 
 ## Known Gaps
 
-1. **No subprocess timeout on scans**: `Popen(...).communicate()` has no
-   timeout and Gunicorn runs with `--timeout 0`; a hanging scan holds one of
-   the two threads indefinitely. (`get_trivy_version()` does use a 10 s timeout.)
+1. **Scan timeout is the only guard**: Gunicorn runs with `--timeout 0`;
+   scans are killed after `SCAN_TIMEOUT` (env, default 300 s) and
+   `get_trivy_version()` after 10 s. Two slow scans still occupy both threads
+   until then.
 2. **Strip filter, not allowlist validation**: invalid characters are removed
    rather than rejected; an image reference format check would be stricter.
 3. **No rate limiting and no authentication** in the app; rely on the
@@ -113,8 +116,8 @@ Dockerfile, Makefile, README.md, SECURITY.md, SecurityManifesto.md
 5. **Makefile**: `audit` and `lint` reference `app/main.py` (should be
    `app/pointvy.py`); `dockerfile` calls a non-existent `generate-dockerfile.sh`.
 6. **Tracked known bugs**: see `tests/README.md` (unit `xfail` tests and
-   smoke `XFAIL` checks), e.g. `@`/`_` stripped from image references,
-   500 on unexpected `trivy --version` output, missing security headers.
+   smoke `XFAIL` checks): `@`/`_` stripped from image references, missing
+   security headers.
 
 ## Testing
 

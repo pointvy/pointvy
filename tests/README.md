@@ -25,13 +25,8 @@ and turn into a failure once it is fixed, so the marker must be removed.
 
 | Known bug (unit) | Test |
 |---|---|
-| `IndexError` (HTTP 500) when `trivy --version` output has no version | `test_landing_survives_unexpected_version_output` |
-| Version regex keeps one patch digit (`0.76.12` shown as `0.76.1`) | `test_landing_version_with_two_digit_patch` |
 | `@` stripped: digest references break | `test_digest_reference_is_preserved` |
 | `_` stripped: valid names break | `test_underscore_reference_is_preserved` |
-| A query that filters to `''` still runs Trivy | `test_query_that_filters_to_empty_is_rejected` |
-| No stdout and no stderr renders a blank result | `test_silent_scanner_failure_shows_an_error` |
-| Scans have no timeout | `test_scan_has_a_timeout` |
 
 ## Container smoke tests (`smoke.sh`)
 
@@ -53,11 +48,11 @@ pulls the scanned images). A full run takes a few minutes.
 |---|---|---|
 | Build | B1–B2 | Image builds with `uv sync --locked`, runs as `gunicorn` |
 | Runtime | R1–R5 | App starts; uid 1001; gunicorn/Trivy versions match `uv.lock`/`Dockerfile`; nothing runs as root |
-| Functional | F1–F7 | Landing page, real scans, `ignore-unfixed`, redirect, clean errors (including a query that filters to nothing) |
+| Functional | F1–F7 | Landing page, real scans, `ignore-unfixed`, redirect, clean errors, a query that filters to nothing is rejected |
 | Security | S1–S9 | Shell metacharacters, reflected HTML, log injection, Trivy option injection (`-c`, `-i`, `-o`, `--help`, options after a space), oversized query, `ignore-unfixed` values, duplicate `q` |
 | HTTP | H1–H4 | `POST` rejected, `/scan` redirect, no debugger console, security headers |
 | Image references | K1–K2 | Digest (`@`) and underscore references survive the filter |
-| Robustness | X1–X4 | Concurrent scans, missing-binary error path, hanging scanner, recovery |
+| Robustness | X1–X4 | Concurrent scans, missing-binary error path, hung scans killed after `SCAN_TIMEOUT` (second container on `PORT+1`), app keeps answering |
 | Shutdown | R6 | Container stops on SIGTERM within the grace period (skipped with `KEEP=1`) |
 
 ### Result codes
@@ -74,4 +69,3 @@ Known bugs currently tracked (`XFAIL`):
 | H4 | No `Content-Security-Policy`, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` headers |
 | K1 | `@` is stripped, so `image@sha256:...` references break |
 | K2 | `_` is stripped, so names like `my_org/my_image` break |
-| X3 | Two hanging scans occupy both threads and the app stops answering (no scan timeout, `--timeout 0`) |

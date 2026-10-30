@@ -176,6 +176,8 @@ The interface should be reachable at [http://localhost:8080](http://localhost:80
 
 Keep in mind that direct Internet access is required by the container in order to download the vulnerabilities database.
 
+A scan is stopped after `SCAN_TIMEOUT` seconds (default `300`, e.g. `-e SCAN_TIMEOUT=120`). Keep it below your platform's request timeout (Cloud Run defaults to 300 s).
+
 ## Usage
 
 The query field of Pointvy might not just take the image name (by example `alpine:3.12.1`) but also the same [commands and options provided by Trivy](https://aquasecurity.github.io/trivy/latest/vulnerability/examples/filter/) as when used in command line mode.

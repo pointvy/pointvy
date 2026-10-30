@@ -7,7 +7,7 @@
 # present) or XPASS (known bug no longer reproduces: update the test).
 #
 # Usage:  tests/smoke.sh
-# Env:    IMAGE=pointvy:smoke  PORT=18080  SKIP_BUILD=1  KEEP=1
+# Env:    IMAGE=pointvy:smoke  PORT=18080 (and PORT+1)  SKIP_BUILD=1  KEEP=1
 # Needs:  docker, curl, network access (Trivy pulls images and its DB).
 # Exit:   0 if no FAIL, 1 otherwise.
 
@@ -33,7 +33,7 @@ PASS=0 FAIL=0 XFAIL=0 XPASS=0
 
 cleanup() {
     if [ -z "${KEEP:-}" ]; then
-        docker rm -f "$NAME" >/dev/null 2>&1
+        docker rm -f "$NAME" "$NAME-timeout" >/dev/null 2>&1
     else
         echo "KEEP set: container $NAME left running on port $PORT"
     fi
@@ -156,10 +156,10 @@ code="$(scan "$TMP/f6" doesnotexist/nope:0)"
 [ "$code" = "200" ] && grep -q 'alert-warning' "$TMP/f6" && ! grep -q 'Traceback' "$TMP/f6"
 result F6 "unknown image gives a clean error" $? "HTTP $code"
 
-# Every character is filtered out, so Trivy gets an empty image reference.
+# Every character is filtered out: rejected without running Trivy.
 code="$(scan "$TMP/f7" '<>;|')"
-[ "$code" = "200" ] && grep -q 'alert-warning' "$TMP/f7" && ! grep -q 'Traceback' "$TMP/f7"
-result F7 "query that filters to nothing gives a clean error" $? "HTTP $code"
+[ "$code" = "200" ] && grep -q 'does not contain a valid image reference' "$TMP/f7"
+result F7 "query that filters to nothing is rejected" $? "HTTP $code"
 
 # --- 4. security ------------------------------------------------------------
 
@@ -278,21 +278,32 @@ in_ctr 'mv /app/trivy.smoke /app/trivy'
 [ "$code" = "200" ] && grep -q 'could not be started' "$TMP/x2" && ! grep -qE 'Errno|/app/' "$TMP/x2"
 result X2 "missing scanner gives a generic error, no 500" $? "HTTP $code"
 
-# A scanner that never returns: scans have no timeout and gunicorn runs with
-# --timeout 0, so two of them occupy both threads and the app stops answering.
-in_ctr 'mv /app/trivy /app/trivy.smoke && printf "#!/bin/sh\nsleep 600\n" >/app/trivy && chmod +x /app/trivy'
-for i in 1 2; do
-    ( curl -s -o /dev/null --max-time 120 "${BASE}/scan/?q=alpine" ) &
+# A scanner that never returns, in a second container with SCAN_TIMEOUT=5:
+# hung scans must be killed (with the shell's child, hence a non-exec
+# script) and the app must keep answering.
+T_NAME="${NAME}-timeout"
+T_BASE="http://127.0.0.1:$((PORT + 1))"
+docker run -d --name "$T_NAME" -e PORT=8080 -e SCAN_TIMEOUT=5 -p "$((PORT + 1)):8080" "$IMAGE" >/dev/null
+for _ in $(seq 1 30); do
+    [ "$(curl -s -o /dev/null -w '%{http_code}' "${T_BASE}/")" = "200" ] && break
+    sleep 1
 done
-sleep 3
-# GET / itself takes ~10s here (the version check times out), hence 25s.
-code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 25 "${BASE}/")"
-in_ctr 'pkill -f "sleep 600"; mv /app/trivy.smoke /app/trivy'
+docker exec "$T_NAME" sh -c 'mv /app/trivy /app/trivy.real && printf "#!/bin/sh\nsleep 600\n" >/app/trivy && chmod +x /app/trivy'
+for i in 1 2; do
+    ( curl -s -o "$TMP/x3.$i" -w '%{http_code} %{time_total}' --max-time 60 "${T_BASE}/scan/?q=alpine" >"$TMP/x3.$i.code" ) &
+done
+sleep 1
+# GET / waits for a free thread, then ~10s for its own version check.
+code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 40 "${T_BASE}/")"
 wait
-[ "$code" = "000" ]; known_bug X3 "hanging scans block the app (no scan timeout)" $? "GET / -> HTTP $code"
-
-code="$(get /dev/null /)"
-[ "$code" = "200" ]; result X4 "app recovers once hung scans end" $? "HTTP $code"
+x3=0
+for i in 1 2; do
+    read -r c t <"$TMP/x3.$i.code"
+    { [ "$c" = "200" ] && grep -q 'The scan timed out.' "$TMP/x3.$i" && [ "${t%.*}" -lt 30 ]; } || x3=1
+done
+result X3 "hung scans are killed after SCAN_TIMEOUT with a generic error" $x3 "$(cat "$TMP"/x3.*.code | tr '\n' ' ')"
+[ "$code" = "200" ]; result X4 "app keeps answering while scans hang" $? "GET / -> HTTP $code"
+docker rm -f "$T_NAME" >/dev/null
 
 # --- 8. shutdown --------------------------------------------------------------
 # Cloud Run and Docker send SIGTERM, then SIGKILL after a grace period.
