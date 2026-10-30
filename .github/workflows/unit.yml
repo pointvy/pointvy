@@ -1,0 +1,50 @@
+name: Unit tests
+
+# Runs tests/unit with pytest (Trivy is mocked; no Docker or network needed
+# beyond installing the locked dependencies).
+on:
+  pull_request:
+    branches:
+      - 'main'
+    paths:
+      - 'app/**'
+      - 'tests/unit/**'
+      - 'Dockerfile'
+      - '.github/workflows/unit.yml'
+  push:
+    branches:
+      - 'main'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: unit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # tag=v7.0.1
+        with:
+          persist-credentials: false
+      # Same uv and Python minor version as the container, read from the Dockerfile.
+      - name: Read versions from Dockerfile
+        id: versions
+        run: |
+          echo "uv=$(sed -nE 's/^ENV UV_VERSION="([^"]+)"/\1/p' Dockerfile)" >> "$GITHUB_OUTPUT"
+          echo "python=$(sed -nE 's/^FROM python:([0-9]+\.[0-9]+)\..*/\1/p' Dockerfile)" >> "$GITHUB_OUTPUT"
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # tag=v10.3.2
+        with:
+          version: ${{ steps.versions.outputs.uv }}
+          python-version: ${{ steps.versions.outputs.python }}
+          enable-cache: false
+      - name: Check lock file
+        working-directory: app
+        run: uv lock --check
+      - name: Run unit tests
+        working-directory: app
+        run: uv run --locked pytest

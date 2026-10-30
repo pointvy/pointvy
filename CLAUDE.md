@@ -52,13 +52,15 @@ them into docs:
     build-tag.yml             # tag v* -> pointvy/pointvy:<tag> (e.g. v1.17.1)
     semgrep.yml               # SAST on PR, push to main, daily; blocking (--error)
     smoke.yml                 # tests/smoke.sh on PRs touching app/, Dockerfile, tests/
+    unit.yml                  # pytest tests/unit on PRs touching app/, Dockerfile, tests/unit/; push to main
     scorecards-analysis.yml   # OpenSSF Scorecard, weekly + push to main
 app/
   pointvy.py                  # Flask app
-  pyproject.toml              # project metadata and dependency ranges
+  pyproject.toml              # project metadata, dependency ranges, dev group (pytest), pytest config
   uv.lock                     # locked dependencies
   templates/main.html         # UI
 tests/
+  unit/test_pointvy.py        # pytest unit tests, Trivy mocked (make unit)
   smoke.sh                    # container smoke & security tests (make smoke)
   README.md                   # test catalogue and result codes
 Dockerfile, Makefile, README.md, SECURITY.md, SecurityManifesto.md
@@ -110,23 +112,33 @@ Dockerfile, Makefile, README.md, SECURITY.md, SecurityManifesto.md
    `Dockerfile` are pinned by tag only.
 5. **Makefile**: `audit` and `lint` reference `app/main.py` (should be
    `app/pointvy.py`); `dockerfile` calls a non-existent `generate-dockerfile.sh`.
-6. **No unit tests**: only the container-level `tests/smoke.sh` (run in CI
-   by `smoke.yml`).
+6. **Tracked known bugs**: see `tests/README.md` (unit `xfail` tests and
+   smoke `XFAIL` checks), e.g. `@`/`_` stripped from image references,
+   500 on unexpected `trivy --version` output, missing security headers.
 
 ## Testing
+
+`tests/unit/` (or `make unit`, i.e. `cd app && uv run --locked pytest`) tests
+`app/pointvy.py` with `subprocess` mocked: exact Trivy argv, character filter,
+`ignore-unfixed`, escaping, error paths, log escaping. Runs in under a second,
+no Docker. Known bugs are `xfail(strict=True)`: remove the marker when fixed.
+pytest is in the `dev` dependency group, which the image excludes (`--no-dev`).
 
 `tests/smoke.sh` (or `make smoke`) builds the image, runs it and checks the
 HTTP API: build, runtime (uid, versions read from `Dockerfile`/`uv.lock`, no
 root), functional (real scans, `ignore-unfixed`, redirect, errors), security
 (shell metacharacters, reflected HTML, log forging, Trivy option injection,
-oversized query) and robustness (concurrent scans, missing binary).
+oversized query, `ignore-unfixed` values, duplicate `q`), HTTP surface,
+image references, robustness (concurrent scans, missing binary, hanging
+scanner) and SIGTERM shutdown.
 
 - Requires Docker, curl and network access; takes a few minutes.
 - Options: `SKIP_BUILD=1`, `IMAGE=...`, `PORT=...`, `KEEP=1`.
 - Results: `PASS`/`FAIL` (exit 1 on any FAIL), `XFAIL`/`XPASS` for known bugs
   tracked with `known_bug`. See `tests/README.md`.
 - **Run it before merging any change to `app/`, the `Dockerfile` or
-  dependencies.** Add a check to it for every new input or security fix.
+  dependencies.** Add a check to it (and a unit test) for every new input
+  or security fix.
 
 Other local checks:
 ```bash
@@ -167,15 +179,17 @@ semgrep scan --config auto --error  # same as CI
    regex); reject, do not strip.
 2. Append it to `cmd` **before** the `"--"` separator.
 3. Log it with `!r`.
-4. Add `tests/smoke.sh` checks for valid and malicious values.
+4. Add unit tests (`tests/unit/`) and `tests/smoke.sh` checks for valid and
+   malicious values.
 
 ## Git Workflow
 - Never push to `main`; use feature branches (`<type>/<description>`, e.g.
   `fix/...`, `ci/...`, `chore/...`). Avoid a `test/` prefix: a stale
   `origin/test` ref conflicts with it.
 - Squash-merge PRs; conventional-commit titles (`fix:`, `chore(deps):`, `ci:`).
-- CI on PRs: Docker build, Semgrep (blocking), GitGuardian, and smoke tests
-  (`smoke.yml`, only when `app/`, `Dockerfile`, `.dockerignore` or `tests/` change).
+- CI on PRs: Docker build, Semgrep (blocking), GitGuardian, unit tests
+  (`unit.yml`) and smoke tests (`smoke.yml`, only when `app/`, `Dockerfile`,
+  `.dockerignore` or `tests/` change).
 
 ## Security Checklist for Changes
 - [ ] User input validated (allowlist) and passed as a single argv element after `--`
@@ -184,7 +198,7 @@ semgrep scan --config auto --error  # same as CI
 - [ ] User-controlled values logged with escaping (`!r`)
 - [ ] `uv.lock` updated if `pyproject.toml` changed
 - [ ] Actions pinned by SHA with an accurate tag comment; workflows have `permissions:`
-- [ ] `make smoke`, `pre-commit run --all-files` and Semgrep pass
+- [ ] `make unit`, `make smoke`, `pre-commit run --all-files` and Semgrep pass
 - [ ] `SecurityManifesto.md` principles respected
 
 ## Resources
