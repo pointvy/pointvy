@@ -1,5 +1,38 @@
 # Tests
 
+Two layers:
+
+- `unit/`: pytest tests of `app/pointvy.py` with Trivy mocked. Fast, no
+  Docker or network. Run on every PR touching `app/`, `tests/unit/` or the
+  `Dockerfile` (`.github/workflows/unit.yml`).
+- `smoke.sh`: end-to-end tests against the real container.
+
+## Unit tests (`unit/`)
+
+```bash
+make unit                           # or: cd app && uv run --locked pytest
+```
+
+`subprocess.Popen` (scan) and `subprocess.run` (version check) are replaced
+by fakes that record the argv and return canned output, so the tests assert
+the exact Trivy command line (`--` immediately before a single query
+argument), the character filter, `ignore-unfixed` handling, output escaping
+and ANSI stripping, error paths and log escaping.
+
+Known bugs are marked `@pytest.mark.xfail(strict=True)` (`xfail_strict` is
+set in `app/pyproject.toml`): they report `XFAIL` while the bug reproduces
+and turn into a failure once it is fixed, so the marker must be removed.
+
+| Known bug (unit) | Test |
+|---|---|
+| `IndexError` (HTTP 500) when `trivy --version` output has no version | `test_landing_survives_unexpected_version_output` |
+| Version regex keeps one patch digit (`0.76.12` shown as `0.76.1`) | `test_landing_version_with_two_digit_patch` |
+| `@` stripped: digest references break | `test_digest_reference_is_preserved` |
+| `_` stripped: valid names break | `test_underscore_reference_is_preserved` |
+| A query that filters to `''` still runs Trivy | `test_query_that_filters_to_empty_is_rejected` |
+| No stdout and no stderr renders a blank result | `test_silent_scanner_failure_shows_an_error` |
+| Scans have no timeout | `test_scan_has_a_timeout` |
+
 ## Container smoke tests (`smoke.sh`)
 
 Builds the image, runs it, and checks the HTTP API end to end.
@@ -20,9 +53,12 @@ pulls the scanned images). A full run takes a few minutes.
 |---|---|---|
 | Build | B1–B2 | Image builds with `uv sync --locked`, runs as `gunicorn` |
 | Runtime | R1–R5 | App starts; uid 1001; gunicorn/Trivy versions match `uv.lock`/`Dockerfile`; nothing runs as root |
-| Functional | F1–F6 | Landing page, real scans, `ignore-unfixed`, redirect, clean errors |
-| Security | S1–S6 | Shell metacharacters, reflected HTML, log injection, Trivy option injection (`-c`, `-i`, `-o`, `--help`), oversized query |
-| Robustness | X1–X2 | Concurrent scans, missing-binary error path |
+| Functional | F1–F7 | Landing page, real scans, `ignore-unfixed`, redirect, clean errors (including a query that filters to nothing) |
+| Security | S1–S9 | Shell metacharacters, reflected HTML, log injection, Trivy option injection (`-c`, `-i`, `-o`, `--help`, options after a space), oversized query, `ignore-unfixed` values, duplicate `q` |
+| HTTP | H1–H4 | `POST` rejected, `/scan` redirect, no debugger console, security headers |
+| Image references | K1–K2 | Digest (`@`) and underscore references survive the filter |
+| Robustness | X1–X4 | Concurrent scans, missing-binary error path, hanging scanner, recovery |
+| Shutdown | R6 | Container stops on SIGTERM within the grace period (skipped with `KEEP=1`) |
 
 ### Result codes
 
@@ -31,4 +67,11 @@ pulls the scanned images). A full run takes a few minutes.
   `known_bug` in the script to track a bug before it is fixed.
 - `XPASS`: a known bug no longer reproduces. Convert that check to a normal `result` test.
 
-No known bugs are currently tracked.
+Known bugs currently tracked (`XFAIL`):
+
+| ID | Bug |
+|---|---|
+| H4 | No `Content-Security-Policy`, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` headers |
+| K1 | `@` is stripped, so `image@sha256:...` references break |
+| K2 | `_` is stripped, so names like `my_org/my_image` break |
+| X3 | Two hanging scans occupy both threads and the app stops answering (no scan timeout, `--timeout 0`) |

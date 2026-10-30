@@ -156,6 +156,11 @@ code="$(scan "$TMP/f6" doesnotexist/nope:0)"
 [ "$code" = "200" ] && grep -q 'alert-warning' "$TMP/f6" && ! grep -q 'Traceback' "$TMP/f6"
 result F6 "unknown image gives a clean error" $? "HTTP $code"
 
+# Every character is filtered out, so Trivy gets an empty image reference.
+code="$(scan "$TMP/f7" '<>;|')"
+[ "$code" = "200" ] && grep -q 'alert-warning' "$TMP/f7" && ! grep -q 'Traceback' "$TMP/f7"
+result F7 "query that filters to nothing gives a clean error" $? "HTTP $code"
+
 # --- 4. security ------------------------------------------------------------
 
 section "4. Security"
@@ -207,9 +212,57 @@ case "$code" in 200|400|414) ok=0 ;; *) ok=1 ;; esac
 [ $ok -eq 0 ] && [ "$alive" = "200" ]
 result S6 "10k-char query is handled, app stays up" $? "HTTP $code, then / -> $alive"
 
-# --- 5. robustness ----------------------------------------------------------
+# Spaces survive the filter: options after one must stay inside the single
+# image-reference argument.
+scan "$TMP/s7a" 'alpine:latest --help' >/dev/null
+scan /dev/null 'alpine:latest -o/tmp/smoke-space' >/dev/null
+written="$(in_ctr 'test -e /tmp/smoke-space && echo yes || echo no')"
+! unescape "$TMP/s7a" | grep -q 'Usage:' && [ "$written" = "no" ]
+result S7 "options after a space in the query are not parsed" $? "usage shown or /tmp/smoke-space=$written"
 
-section "5. Robustness"
+code="$(scan "$TMP/s8" alpine:latest --data-urlencode 'ignore-unfixed=true --debug')"
+[ "$code" = "200" ] && ! grep -q 'value="true" checked' "$TMP/s8" && grep -q 'alpine:latest (alpine ' "$TMP/s8"
+result S8 "ignore-unfixed accepts only the exact value 'true'" $? "HTTP $code"
+
+code="$(get "$TMP/s9" '/scan/?q=alpine:latest&q=--help')"
+[ "$code" = "200" ] && ! unescape "$TMP/s9" | grep -q 'Usage:' && grep -q 'alpine:latest (alpine ' "$TMP/s9"
+result S9 "a second q parameter is ignored" $? "HTTP $code"
+
+# --- 5. HTTP surface ----------------------------------------------------------
+
+section "5. HTTP"
+code="$(get /dev/null /scan/ -X POST -d q=alpine)"
+[ "$code" = "405" ]; result H1 "POST /scan/ is rejected" $? "HTTP $code"
+
+code="$(get /dev/null '/scan?q=alpine')"
+[ "$code" = "308" ]; result H2 "/scan redirects to /scan/" $? "HTTP $code"
+
+code="$(get /dev/null /console)"
+[ "$code" = "404" ]; result H3 "no debugger console (/console is 404)" $? "HTTP $code"
+
+curl -s -o /dev/null -D "$TMP/h4" --max-time 30 "${BASE}/"
+missing=""
+for h in Content-Security-Policy X-Content-Type-Options X-Frame-Options Referrer-Policy; do
+    grep -qi "^$h:" "$TMP/h4" || missing="$missing $h"
+done
+[ -n "$missing" ]; known_bug H4 "security headers missing" $? "missing:$missing"
+
+# --- 6. known image-reference bugs ------------------------------------------
+# The filter strips '@' and '_', both valid in image references. The
+# reflected query in the form shows what was actually passed to Trivy.
+
+section "6. Image references"
+scan "$TMP/k1" "alpine@sha256:$(printf '0%.0s' $(seq 64))" >/dev/null
+! grep -q 'value="alpine@sha256:' "$TMP/k1"
+known_bug K1 "digest reference loses its '@'" $?
+
+scan "$TMP/k2" 'my_org/my_image:1_0' >/dev/null
+! grep -q 'value="my_org/my_image:1_0"' "$TMP/k2"
+known_bug K2 "reference loses its '_'" $?
+
+# --- 7. robustness ----------------------------------------------------------
+
+section "7. Robustness"
 for i in 1 2 3; do
     ( scan /dev/null alpine:latest >"$TMP/x1.$i" ) &
 done
@@ -224,6 +277,33 @@ code="$(scan "$TMP/x2" alpine:latest)"
 in_ctr 'mv /app/trivy.smoke /app/trivy'
 [ "$code" = "200" ] && grep -q 'could not be started' "$TMP/x2" && ! grep -qE 'Errno|/app/' "$TMP/x2"
 result X2 "missing scanner gives a generic error, no 500" $? "HTTP $code"
+
+# A scanner that never returns: scans have no timeout and gunicorn runs with
+# --timeout 0, so two of them occupy both threads and the app stops answering.
+in_ctr 'mv /app/trivy /app/trivy.smoke && printf "#!/bin/sh\nsleep 600\n" >/app/trivy && chmod +x /app/trivy'
+for i in 1 2; do
+    ( curl -s -o /dev/null --max-time 120 "${BASE}/scan/?q=alpine" ) &
+done
+sleep 3
+# GET / itself takes ~10s here (the version check times out), hence 25s.
+code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 25 "${BASE}/")"
+in_ctr 'pkill -f "sleep 600"; mv /app/trivy.smoke /app/trivy'
+wait
+[ "$code" = "000" ]; known_bug X3 "hanging scans block the app (no scan timeout)" $? "GET / -> HTTP $code"
+
+code="$(get /dev/null /)"
+[ "$code" = "200" ]; result X4 "app recovers once hung scans end" $? "HTTP $code"
+
+# --- 8. shutdown --------------------------------------------------------------
+# Cloud Run and Docker send SIGTERM, then SIGKILL after a grace period.
+
+if [ -z "${KEEP:-}" ]; then
+    section "8. Shutdown"
+    start="$(date +%s)"
+    docker stop -t 10 "$NAME" >/dev/null
+    elapsed=$(( $(date +%s) - start ))
+    [ "$elapsed" -lt 8 ]; result R6 "container stops on SIGTERM before the 10s kill" $? "took ${elapsed}s"
+fi
 
 # --- summary ----------------------------------------------------------------
 

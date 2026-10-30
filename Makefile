@@ -1,6 +1,6 @@
 
 .DEFAULT: build
-.PHONY: build run-locally deploy audit lock lint dockerfile smoke
+.PHONY: build run-locally deploy audit lock lint dockerfile smoke unit
 
 build:
 	docker build . -t pointvy
@@ -11,6 +11,10 @@ run-locally:
 # build the image and run the container smoke/security tests
 smoke:
 	./tests/smoke.sh
+
+# unit tests (Trivy mocked, no Docker needed)
+unit:
+	cd app && uv run --locked pytest
 
 deploy:
 	gcloud run deploy pointvy --source .
