@@ -9,6 +9,7 @@ they pass while the bug reproduces and fail once it is fixed, so the marker
 has to be removed, like XPASS in tests/smoke.sh.
 """
 
+import signal
 import subprocess
 
 import pytest
@@ -25,6 +26,7 @@ class FakePopen:
     stdout = b""
     stderr = b""
     raise_on_start = None
+    hang = False
 
     def __init__(self, cmd, **kwargs):
         if FakePopen.raise_on_start:
@@ -32,10 +34,17 @@ class FakePopen:
         self.cmd = cmd
         self.kwargs = kwargs
         self.communicate_kwargs = None
+        self.pid = 4242
+        self.returncode = None
         FakePopen.calls.append(self)
 
     def communicate(self, **kwargs):
-        self.communicate_kwargs = kwargs
+        # first call: the one with the scan timeout; later calls: after kill
+        if self.communicate_kwargs is None:
+            self.communicate_kwargs = kwargs
+            if FakePopen.hang:
+                raise subprocess.TimeoutExpired(self.cmd, kwargs.get("timeout"))
+        self.returncode = -9 if FakePopen.hang else 0
         return FakePopen.stdout, FakePopen.stderr
 
 
@@ -45,7 +54,11 @@ def fake_trivy(monkeypatch):
     FakePopen.stdout = b"alpine:latest (alpine 3.22.0)\nTotal: 0\n"
     FakePopen.stderr = b""
     FakePopen.raise_on_start = None
+    FakePopen.hang = False
+    FakePopen.killed = []
     monkeypatch.setattr(pointvy.subprocess, "Popen", FakePopen)
+    monkeypatch.setattr(pointvy.os, "killpg",
+                        lambda pid, sig: FakePopen.killed.append((pid, sig)))
     set_version_output(monkeypatch, "Version: 0.76.1\n")
     monkeypatch.setattr(pointvy, "POINTVY_VERSION", "9.9.9")
     return FakePopen
@@ -102,7 +115,6 @@ def test_landing_version_unknown_when_trivy_fails(client, monkeypatch, exc):
     assert "Trivy version: unknown" in body(resp)
 
 
-@pytest.mark.xfail(reason="known bug: IndexError when --version output has no version")
 def test_landing_survives_unexpected_version_output(client, monkeypatch):
     set_version_output(monkeypatch, "something unexpected\n")
     resp = client.get("/")
@@ -110,7 +122,6 @@ def test_landing_survives_unexpected_version_output(client, monkeypatch):
     assert "Trivy version: unknown" in body(resp)
 
 
-@pytest.mark.xfail(reason=r"known bug: regex \d+\.\d+\.\d keeps one patch digit")
 def test_landing_version_with_two_digit_patch(client, monkeypatch):
     set_version_output(monkeypatch, "Version: 0.76.12\n")
     assert "Trivy version: 0.76.12<" in body(client.get("/"))
@@ -230,11 +241,13 @@ def test_underscore_reference_is_preserved(client):
     assert last_cmd()[-1] == query
 
 
-@pytest.mark.xfail(reason="known bug: a query that filters to '' still runs Trivy")
-def test_query_that_filters_to_empty_is_rejected(client):
-    resp = scan(client, q="<>;|")
+@pytest.mark.parametrize("query", ["<>;|", "   ", "@_@"])
+def test_query_that_filters_to_empty_is_rejected(client, query):
+    resp = scan(client, q=query, **{"ignore-unfixed": "true"})
+    assert resp.status_code == 200
     assert FakePopen.calls == []
-    assert "alert-warning" in body(resp)
+    assert "does not contain a valid image reference" in body(resp)
+    assert 'value="true" checked' in body(resp)
 
 
 # --- output handling ----------------------------------------------------------
@@ -300,17 +313,41 @@ def test_missing_scanner_gives_generic_error(client, fake_trivy):
     assert "./trivy" not in text
 
 
-@pytest.mark.xfail(reason="known bug: no stdout and no stderr renders a blank result")
 def test_silent_scanner_failure_shows_an_error(client, fake_trivy):
     fake_trivy.stdout = b""
     fake_trivy.stderr = b""
-    assert "alert-warning" in body(scan(client, q="alpine"))
+    text = body(scan(client, q="alpine"))
+    assert "alert-warning" in text
+    assert "The scan returned no result." in text
 
 
-@pytest.mark.xfail(reason="known gap: scans have no timeout")
-def test_scan_has_a_timeout(client):
+def test_scan_has_a_timeout_in_its_own_process_group(client):
     scan(client, q="alpine")
-    assert FakePopen.calls[-1].communicate_kwargs.get("timeout")
+    assert FakePopen.calls[-1].communicate_kwargs == {"timeout": pointvy.SCAN_TIMEOUT}
+    assert FakePopen.calls[-1].kwargs.get("start_new_session") is True
+    assert FakePopen.killed == []
+
+
+def test_scan_timeout_kills_the_scan_and_shows_generic_error(client, fake_trivy):
+    fake_trivy.hang = True
+    fake_trivy.stdout = b"partial output"
+    fake_trivy.stderr = b"partial error"
+    resp = scan(client, q="alpine")
+    text = body(resp)
+    assert resp.status_code == 200
+    assert FakePopen.killed == [(4242, signal.SIGKILL)]
+    assert "The scan timed out." in text
+    assert "partial" not in text
+
+
+def test_scan_timeout_when_scan_already_ended(client, fake_trivy, monkeypatch):
+    def gone(pid, sig):
+        raise ProcessLookupError(3, "No such process")
+    monkeypatch.setattr(pointvy.os, "killpg", gone)
+    fake_trivy.hang = True
+    text = body(scan(client, q="alpine"))
+    assert "The scan timed out." in text
+    assert "could not be started" not in text
 
 
 # --- logging ------------------------------------------------------------------

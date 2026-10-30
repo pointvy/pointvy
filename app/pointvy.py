@@ -1,5 +1,6 @@
 import os
 import re
+import signal
 import subprocess
 
 from flask import Flask
@@ -18,6 +19,9 @@ app.logger.setLevel(logging.INFO)
 
 TRIVY_VERSION = os.environ.get("TRIVY_VERSION")
 POINTVY_VERSION = os.environ.get("POINTVY_VERSION")
+# seconds before a scan is killed; gunicorn runs with --timeout 0, so without
+# it a hanging scan would hold one of the two threads forever
+SCAN_TIMEOUT = int(os.environ.get("SCAN_TIMEOUT", "300"))
 
 
 def get_trivy_version():
@@ -36,7 +40,10 @@ def get_trivy_version():
     except Exception as e:
         app.logger.error(f"Error getting Trivy version: {str(e)}")
         return "unknown"
-    version = re.findall(r"\d+\.\d+\.\d", line)
+    version = re.findall(r"\d+\.\d+\.\d+", line)
+    if not version:
+        app.logger.error(f"No version in Trivy output: {line!r}")
+        return "unknown"
     app.logger.info(f"Trivy version: {version[0]}")
     return version[0]
 
@@ -68,6 +75,16 @@ def trivy_scan():
             cmd.append("--ignore-unfixed")
             checked_value = "checked"
 
+        # nothing left after filtering: do not run Trivy with an empty reference
+        if not query_sanitized.strip():
+            app.logger.info("Query is empty after filtering.")
+            return render_template("main.html", content="",
+                                   action=url_for("trivy_scan"), query="",
+                                   trivy_version=get_trivy_version(),
+                                   pointvy_version=POINTVY_VERSION,
+                                   checked=checked_value,
+                                   error="The query does not contain a valid image reference.")
+
         # "--" ends option parsing: a query starting with "-" (still allowed
         # by the filter above) is an image reference, never a Trivy flag
         cmd.append("--")
@@ -80,17 +97,31 @@ def trivy_scan():
 
         try:
             app.logger.info(f"Executing command: {cmd}")
+            # own process group, so a timeout kills Trivy and any child
             res = subprocess.Popen(
-                cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE) # nosemgrep
-            output, error_handler = res.communicate()
+                cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, # nosemgrep
+                start_new_session=True)
+            try:
+                output, error_handler = res.communicate(timeout=SCAN_TIMEOUT)
+            except subprocess.TimeoutExpired:
+                try:
+                    os.killpg(res.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass  # ended between the timeout and the kill
+                res.communicate()
+                app.logger.error(f"Scan timed out after {SCAN_TIMEOUT}s.")
+                output, error_handler = b"", b""
+                error = "The scan timed out."
             if output:
                 app.logger.info(f"Query successful.")
                 content = output.decode('utf-8')
-            else:
-                if error_handler:
-                    app.logger.error(f"Error> error {error_handler.strip()}")
-                    error = error_handler.strip().decode('utf-8')
-                    error = ansi_escape.sub('', error)
+            elif error_handler:
+                app.logger.error(f"Error> error {error_handler.strip()}")
+                error = error_handler.strip().decode('utf-8')
+                error = ansi_escape.sub('', error)
+            elif not error:
+                app.logger.error(f"Scan produced no output (exit code {res.returncode}).")
+                error = "The scan returned no result."
         except OSError as e:
             app.logger.error(f"OSError > {e.errno} | {e.strerror} | {e.filename}")
 
