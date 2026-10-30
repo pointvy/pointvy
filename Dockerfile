@@ -1,4 +1,4 @@
-FROM aquasec/trivy:0.74.0 AS base
+FROM aquasec/trivy:0.76.1 AS base
 
 FROM python:3.14.9-alpine3.23@sha256:a3d4eff2e4a3de12d9709b3e80cee788109d7292955972a83f5fff81b06c2e95
 
