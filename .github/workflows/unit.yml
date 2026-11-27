@@ -37,7 +37,7 @@ jobs:
         run: |
           echo "uv=$(sed -nE 's/^ENV UV_VERSION="([^"]+)"/\1/p' Dockerfile)" >> "$GITHUB_OUTPUT"
           echo "python=$(sed -nE 's/^FROM python:([0-9]+\.[0-9]+)\..*/\1/p' Dockerfile)" >> "$GITHUB_OUTPUT"
-      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # tag=v10.3.2
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # tag=v10.4.0
         with:
           version: ${{ steps.versions.outputs.uv }}
           python-version: ${{ steps.versions.outputs.python }}
